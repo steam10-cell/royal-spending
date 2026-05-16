@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Royal Spending - 품격 있는 소비 관리</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+        .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
+        @keyframes money-spread { 
+            0% { transform: translate(0, 0) scale(0); opacity: 1; } 
+            100% { transform: translate(calc(cos(var(--angle)) * var(--dist)), calc(sin(var(--angle)) * var(--dist))) rotate(var(--rot)) scale(2.5); opacity: 0; } 
+        }
+        .animate-money-spread { animation: money-spread 2s cubic-bezier(0.1, 0.9, 0.2, 1) forwards; }
+        .no-scrollbar::-webkit-scrollbar { width: 0px; }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .spotlight-overlay { pointer-events: none; }
+        .spotlight-active { pointer-events: auto !important; }
+    </style>
+</head>
+<body class="bg-[#F8F7FF]">
+
+    <div id="app" class="max-w-md mx-auto h-screen flex flex-col bg-[#F8F7FF] shadow-2xl relative overflow-hidden border-x border-purple-100">
+        
+        <!-- 1. 웰컴 스플래시 -->
+        <div id="welcome-screen" class="absolute inset-0 bg-[#6B21A8] z-[200] flex flex-col items-center justify-center text-white p-10 text-center animate-fade-in">
+            <i data-lucide="award" class="w-20 h-20 mb-6 animate-bounce"></i>
+            <h1 class="text-4xl font-black mb-2 tracking-tighter italic uppercase">ROYAL SPENDING</h1>
+            <p class="text-white/60 text-sm font-medium">당신의 소비를 품격 있게 관리하세요</p>
+        </div>
+
+        <!-- 2. 가이드 레이어 -->
+        <div id="guide-layer" class="hidden absolute inset-0 z-[150] overflow-hidden">
+            <div id="spotlight-top" class="absolute bg-black/90 spotlight-active"></div>
+            <div id="spotlight-bottom" class="absolute bg-black/90 spotlight-active"></div>
+            <div id="spotlight-left" class="absolute bg-black/90 spotlight-active"></div>
+            <div id="spotlight-right" class="absolute bg-black/90 spotlight-active"></div>
+            <div id="spotlight-focus" class="absolute border-4 border-white/50 rounded-2xl transition-all duration-300"></div>
+            
+            <div id="guide-box-container" class="absolute left-0 right-0 px-8 py-10 flex flex-col items-center text-center spotlight-active">
+                <div class="bg-white/10 backdrop-blur-md p-6 rounded-[2.5rem] border border-white/20 shadow-2xl w-full max-w-[200px]">
+                    <div id="guide-dots" class="flex gap-2 justify-center mb-6"></div>
+                    <button id="guide-next-btn" class="w-full bg-white text-[#6B21A8] py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 active:scale-95 shadow-xl">
+                        <span>다음</span>
+                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 헤더 -->
+        <header class="bg-white border-b border-purple-100 px-6 py-5 flex justify-between items-center z-20 shrink-0">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-[#6B21A8] rounded-lg flex items-center justify-center shadow-lg"><i data-lucide="award" class="text-white w-5 h-5"></i></div>
+                <h1 class="text-xl font-black text-[#6B21A8] tracking-tight uppercase italic">Royal</h1>
+            </div>
+            <div class="flex gap-4 text-purple-400">
+                <i data-lucide="bell" class="w-5 h-5"></i><i data-lucide="user" class="w-5 h-5"></i>
+            </div>
+        </header>
+
+        <!-- 메인 콘텐츠 -->
+        <main id="main-content" class="flex-1 overflow-y-auto px-5 py-6 space-y-7 pb-32 no-scrollbar scroll-smooth">
+            <!-- Home Tab Content -->
+            <div id="tab-home" class="tab-content space-y-7 animate-fade-in">
+                <!-- 예산 카드 -->
+                <div id="budget-card" class="bg-[#6B21A8] rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden transition-transform duration-300">
+                    <div class="relative z-10">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2 opacity-80"><i data-lucide="wallet" class="w-4 h-4"></i><p class="text-[10px] font-bold uppercase tracking-widest">Budget Remaining</p></div>
+                            <button onclick="openModal('budget')" class="p-1 hover:bg-white/10 rounded-lg transition-colors"><i data-lucide="settings" class="text-white/60 w-5 h-5"></i></button>
+                        </div>
+                        <h3 id="display-remaining" class="text-4xl font-black mb-6 tracking-tighter">₩ 0</h3>
+                        <div class="w-full h-2 bg-white/20 rounded-full mb-6 overflow-hidden"><div id="progress-bar" class="h-full bg-white shadow-[0_0_15px_rgba(255,255,255,0.5)] transition-all duration-1000" style="width: 0%"></div></div>
+                        <div class="flex justify-between items-end border-t border-white/10 pt-5">
+                            <div class="flex gap-6">
+                                <div><p class="text-[9px] text-white/50 font-bold uppercase mb-1">Monthly</p><p id="display-budget" class="text-base font-black">₩ 0</p></div>
+                                <div><p class="text-[9px] text-white/50 font-bold uppercase mb-1">Target</p><p id="display-target" class="text-base font-black text-yellow-300">₩ 0</p></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 소비 계획 섹션 -->
+                <div id="plan-section" class="space-y-4 rounded-[2rem] p-6 bg-white shadow-sm border border-purple-50 transition-all duration-300">
+                    <div class="flex justify-between items-center">
+                        <h4 class="text-lg font-black text-gray-900">오늘의 소비 계획</h4>
+                        <button onclick="openModal('plan')" class="p-1.5 bg-purple-100 text-[#6B21A8] rounded-xl active:scale-90"><i data-lucide="plus" class="w-5 h-5"></i></button>
+                    </div>
+                    <div id="plan-list" class="space-y-3">
+                        <!-- Plans will be injected here -->
+                    </div>
+                </div>
+
+                <!-- 통계 그리드 -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-white p-5 rounded-[1.5rem] border border-purple-50 shadow-sm text-center">
+                        <i data-lucide="trending-up" class="text-blue-500 mb-2 mx-auto w-5 h-5"></i>
+                        <p class="text-[10px] text-gray-400 font-bold mb-0.5 uppercase tracking-tighter">Spending Ratio</p>
+                        <p id="stat-ratio" class="text-xl font-black text-gray-800">0%</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-[1.5rem] border border-purple-50 shadow-sm text-center">
+                        <i data-lucide="pie-chart" class="text-[#6B21A8] mb-2 mx-auto w-5 h-5"></i>
+                        <p class="text-[10px] text-gray-400 font-bold mb-0.5 uppercase tracking-tighter">Happiness Score</p>
+                        <div class="flex items-center justify-center gap-0.5"><p id="stat-satisfaction" class="text-xl font-black text-gray-800">0</p><i data-lucide="star" class="w-3.5 h-3.5 text-amber-400 fill-amber-400"></i></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Calendar Tab Content -->
+            <div id="tab-calendar" class="tab-content hidden space-y-7 animate-fade-in">
+                <h2 class="text-xl font-black text-[#1F1F1F] mb-5 px-1">소비 히스토리</h2>
+                <div id="calendar-view" class="bg-white rounded-[2.5rem] p-6 shadow-xl border border-purple-50 transition-transform duration-300">
+                    <div class="flex items-center justify-between mb-8"><span id="calendar-title" class="text-2xl font-black text-[#6B21A8] tracking-tighter underline decoration-purple-100 decoration-8 underline-offset-[-2px]">0월 챌린지</span></div>
+                    <div id="calendar-grid" class="grid grid-cols-7 gap-2.5 text-center">
+                        <!-- Calendar days will be injected here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Record Tab Content -->
+            <div id="tab-record" class="tab-content hidden animate-fade-in relative">
+                <div id="money-anim-container" class="absolute inset-0 pointer-events-none"></div>
+                <h2 class="text-xl font-black text-[#1F1F1F] mb-5 px-1">지출 기록하기</h2>
+                <div id="record-form" class="p-8 bg-white rounded-[2.5rem] shadow-xl border border-purple-50 transition-all duration-300">
+                    <div class="space-y-6">
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-black uppercase tracking-widest text-gray-400">ITEM NAME</label>
+                            <input type="text" id="record-item" placeholder="무엇을 샀나요?" class="w-full p-5 bg-purple-50/50 rounded-2xl outline-none font-bold text-sm focus:ring-2 focus:ring-purple-200" />
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-black uppercase tracking-widest text-gray-400">AMOUNT (₩)</label>
+                            <input type="number" id="record-price" placeholder="0" class="w-full p-5 bg-purple-50/50 rounded-2xl outline-none font-bold text-sm focus:ring-2 focus:ring-purple-200" />
+                        </div>
+                        <div class="space-y-4">
+                            <label class="text-[10px] font-black uppercase tracking-widest text-center block text-gray-400">SATISFACTION</label>
+                            <div class="flex gap-2 justify-center" id="satisfaction-stars">
+                                <!-- 5 Stars -->
+                            </div>
+                        </div>
+                        <button onclick="saveRecord()" class="w-full bg-[#6B21A8] text-white py-5 rounded-2xl font-black text-sm flex items-center justify-center gap-3 shadow-xl transition-all active:scale-95 hover:bg-purple-700">
+                            <i data-lucide="save" class="w-5 h-5"></i> 품격 있게 기록하기
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Tab (Empty State for Demo) -->
+            <div id="tab-history" class="tab-content hidden animate-fade-in">
+                <h2 class="text-xl font-black text-[#1F1F1F] mb-5 px-1">상세 내역</h2>
+                <div class="text-center py-20 opacity-30 font-black italic uppercase">Coming Soon</div>
+            </div>
+        </main>
+
+        <!-- 모달: 예산 설정 -->
+        <div id="modal-budget" class="fixed inset-0 z-[300] bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-6 animate-fade-in">
+            <div class="bg-white w-full max-w-xs rounded-[2.5rem] p-8 shadow-2xl">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-black text-gray-800">예산 설정</h3>
+                    <button onclick="closeModal('budget')"><i data-lucide="x-circle" class="text-gray-300 w-6 h-6"></i></button>
+                </div>
+                <div class="space-y-4">
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black text-purple-400 uppercase tracking-widest">Monthly Budget</label>
+                        <input type="number" id="input-budget" class="w-full p-4 bg-purple-50 rounded-2xl font-black text-purple-900 outline-none" />
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black text-amber-400 uppercase tracking-widest">Daily Target</label>
+                        <input type="number" id="input-target" class="w-full p-4 bg-amber-50 rounded-2xl font-black text-amber-900 outline-none" />
+                    </div>
+                    <button onclick="updateBudget()" class="w-full bg-[#6B21A8] text-white py-4 rounded-2xl font-black text-sm shadow-lg active:scale-95">저장하기</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 모달: 계획 추가 -->
+        <div id="modal-plan" class="fixed inset-0 z-[300] bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-6 animate-fade-in">
+            <div class="bg-white w-full max-w-xs rounded-[2.5rem] p-8 shadow-2xl">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-black text-gray-800">소비 계획 추가</h3>
+                    <button onclick="closeModal('plan')"><i data-lucide="x-circle" class="text-gray-300 w-6 h-6"></i></button>
+                </div>
+                <div class="space-y-4">
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Plan Name</label>
+                        <input type="text" id="input-plan-name" placeholder="예: 운동화 사기" class="w-full p-4 bg-gray-50 rounded-2xl font-bold text-gray-900 outline-none" />
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Estimated Amount</label>
+                        <input type="number" id="input-plan-price" placeholder="0" class="w-full p-4 bg-gray-50 rounded-2xl font-bold text-gray-900 outline-none" />
+                    </div>
+                    <button onclick="addNewPlan()" class="w-full bg-[#6B21A8] text-white py-4 rounded-2xl font-black text-sm shadow-lg active:scale-95">계획 확정</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 하단 네비게이션 -->
+        <nav id="bottom-nav" class="absolute bottom-6 left-1/2 -translate-x-1/2 w-[92%] bg-white border border-purple-100 rounded-[2rem] p-2 flex justify-between items-center shadow-2xl z-50">
+            <button onclick="setActiveTab('home')" class="nav-btn active flex flex-col items-center flex-1 py-3.5 rounded-[1.6rem] transition-all relative" data-tab="home">
+                <i data-lucide="home" class="w-5 h-5"></i>
+                <span class="text-[9px] mt-1 font-black uppercase tracking-tighter">홈</span>
+            </button>
+            <button onclick="setActiveTab('calendar')" class="nav-btn flex flex-col items-center flex-1 py-3.5 rounded-[1.6rem] transition-all relative" data-tab="calendar">
+                <i data-lucide="calendar" class="w-5 h-5"></i>
+                <span class="text-[9px] mt-1 font-black uppercase tracking-tighter">캘린더</span>
+            </button>
+            <button onclick="setActiveTab('record')" class="nav-btn flex flex-col items-center flex-1 py-3.5 rounded-[1.6rem] transition-all relative" data-tab="record">
+                <i data-lucide="pen-line" class="w-5 h-5"></i>
+                <span class="text-[9px] mt-1 font-black uppercase tracking-tighter">기록</span>
+            </button>
+            <button onclick="setActiveTab('history')" class="nav-btn flex flex-col items-center flex-1 py-3.5 rounded-[1.6rem] transition-all relative" data-tab="history">
+                <i data-lucide="history" class="w-5 h-5"></i>
+                <span class="text-[9px] mt-1 font-black uppercase tracking-tighter">내역</span>
+            </button>
+        </nav>
+    </div>
+
+    <script>
+        // --- State ---
+        let state = {
+            activeTab: 'home',
+            budget: 100000,
+            dailyTarget: 5000,
+            records: [
+                { id: 1, item: '점심식사', price: 9000, category: '필수재', satisfaction: 5, date: getTodayStr() }
+            ],
+            plans: [
+                { id: 101, item: '문제집 구매', price: 12000, date: getTodayStr() }
+            ],
+            currentSatisfaction: 5,
+            guideStep: 0,
+            showGuide: false
+        };
+
+        const guideData = [
+            { targetTab: 'home', highlightId: 'budget-card', boxPosition: 'bottom' },
+            { targetTab: 'home', highlightId: 'plan-section', boxPosition: 'top' },
+            { targetTab: 'record', highlightId: 'record-form', boxPosition: 'top' },
+            { targetTab: 'calendar', highlightId: 'calendar-view', boxPosition: 'bottom' }
+        ];
+
+        // --- Helpers ---
+        function getTodayStr() {
+            const now = new Date();
+            return `${now.getFullYear()}. ${String(now.getMonth() + 1).padStart(2, '0')}. ${String(now.getDate()).padStart(2, '0')}`;
+        }
+
+        // --- UI Logic ---
+        function init() {
+            lucide.createIcons();
+            
+            // 웰컴 스크린 2초 후 가이드 시작
+            setTimeout(() => {
+                document.getElementById('welcome-screen').classList.add('hidden');
+                startGuide();
+            }, 2000);
+
+            renderStars();
+            updateUI();
+        }
+
+        function setActiveTab(tabId) {
+            state.activeTab = tabId;
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                const isActive = btn.dataset.tab === tabId;
+                btn.classList.toggle('bg-[#6B21A8]', isActive);
+                btn.classList.toggle('text-white', isActive);
+                btn.classList.toggle('shadow-xl', isActive);
+                btn.classList.toggle('translate-y-[-4px]', isActive);
+                btn.classList.toggle('text-purple-200', !isActive);
+            });
+
+            if (tabId === 'calendar') renderCalendar();
+            updateUI();
+        }
+
+        function renderStars() {
+            const container = document.getElementById('satisfaction-stars');
+            container.innerHTML = '';
+            for (let i = 1; i <= 5; i++) {
+                const star = document.createElement('i');
+                star.setAttribute('data-lucide', 'star');
+                star.className = `w-8 h-8 transition-all active:scale-125 cursor-pointer ${state.currentSatisfaction >= i ? 'text-amber-400 fill-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]' : 'text-gray-200'}`;
+                star.onclick = () => { state.currentSatisfaction = i; renderStars(); };
+                container.appendChild(star);
+            }
+            lucide.createIcons();
+        }
+
+        function updateUI() {
+            const totalSpent = state.records.reduce((sum, r) => sum + r.price, 0);
+            const remaining = state.budget - totalSpent;
+            const percent = state.budget > 0 ? Math.max(0, Math.round((remaining / state.budget) * 100)) : 0;
+
+            document.getElementById('display-remaining').innerText = `₩ ${remaining.toLocaleString()}`;
+            document.getElementById('display-budget').innerText = `₩ ${state.budget.toLocaleString()}`;
+            document.getElementById('display-target').innerText = `₩ ${state.dailyTarget.toLocaleString()}`;
+            document.getElementById('progress-bar').style.width = `${percent}%`;
+
+            // Stats
+            const essentialCount = state.records.filter(r => r.category === '필수재').length;
+            const avgSat = state.records.length > 0 ? (state.records.reduce((s, r) => s + r.satisfaction, 0) / state.records.length).toFixed(1) : 0;
+            const ratio = state.records.length > 0 ? Math.round((essentialCount / state.records.length) * 100) : 0;
+
+            document.getElementById('stat-ratio').innerText = `${ratio}%`;
+            document.getElementById('stat-satisfaction').innerText = avgSat;
+
+            // Plans
+            const planList = document.getElementById('plan-list');
+            planList.innerHTML = '';
+            const todayStr = getTodayStr();
+            const todayPlans = state.plans.filter(p => p.date === todayStr);
+
+            if (todayPlans.length > 0) {
+                todayPlans.forEach(p => {
+                    const div = document.createElement('div');
+                    div.className = "p-4 px-5 rounded-2xl border flex justify-between items-center bg-purple-50/50 border-transparent";
+                    div.innerHTML = `
+                        <div>
+                            <p class="font-black text-sm text-gray-800">${p.item}</p>
+                            <p class="text-[10px] font-bold text-purple-400">₩${p.price.toLocaleString()}</p>
+                        </div>
+                        <i data-lucide="check-circle-2" class="w-5 h-5 text-purple-200"></i>
+                    `;
+                    planList.appendChild(div);
+                });
+            } else {
+                planList.innerHTML = `<p class="text-center py-4 text-sm font-bold opacity-40 text-gray-400">계획된 소비가 없습니다.</p>`;
+            }
+            lucide.createIcons();
+        }
+
+        // --- Modals ---
+        function openModal(type) {
+            if (type === 'budget') {
+                document.getElementById('input-budget').value = state.budget;
+                document.getElementById('input-target').value = state.dailyTarget;
+            }
+            document.getElementById(`modal-${type}`).classList.remove('hidden');
+        }
+
+        function closeModal(type) {
+            document.getElementById(`modal-${type}`).classList.add('hidden');
+        }
+
+        function updateBudget() {
+            state.budget = Number(document.getElementById('input-budget').value);
+            state.dailyTarget = Number(document.getElementById('input-target').value);
+            closeModal('budget');
+            updateUI();
+        }
+
+        function addNewPlan() {
+            const name = document.getElementById('input-plan-name').value;
+            const price = Number(document.getElementById('input-plan-price').value);
+            if (!name || !price) return;
+            state.plans.push({ id: Date.now(), item: name, price, date: getTodayStr() });
+            closeModal('plan');
+            document.getElementById('input-plan-name').value = '';
+            document.getElementById('input-plan-price').value = '';
+            updateUI();
+        }
+
+        // --- Record Action ---
+        function saveRecord() {
+            const item = document.getElementById('record-item').value;
+            const price = Number(document.getElementById('record-price').value);
+            if (!item || !price) return;
+
+            state.records.push({
+                id: Date.now(),
+                item,
+                price,
+                satisfaction: state.currentSatisfaction,
+                category: '필수재',
+                date: getTodayStr()
+            });
+
+            showMoneyAnim();
+            document.getElementById('record-item').value = '';
+            document.getElementById('record-price').value = '';
+            updateUI();
+        }
+
+        function showMoneyAnim() {
+            const container = document.getElementById('money-anim-container');
+            container.innerHTML = '';
+            for (let i = 0; i < 40; i++) {
+                const bill = document.createElement('div');
+                bill.className = 'absolute text-6xl animate-money-spread drop-shadow-[0_10px_10px_rgba(0,0,0,0.3)] flex items-center justify-center';
+                bill.innerText = '💵';
+                const angle = Math.random() * 360;
+                const dist = 200 + Math.random() * 300;
+                const rot = Math.random() * 1440;
+                const delay = Math.random() * 0.2;
+                bill.style.setProperty('--angle', `${angle}deg`);
+                bill.style.setProperty('--dist', `${dist}px`);
+                bill.style.setProperty('--rot', `${rot}deg`);
+                bill.style.animationDelay = `${delay}s`;
+                bill.style.left = '50%';
+                bill.style.top = '50%';
+                container.appendChild(bill);
+            }
+            setTimeout(() => { container.innerHTML = ''; }, 2500);
+        }
+
+        // --- Calendar ---
+        function renderCalendar() {
+            const now = new Date();
+            document.getElementById('calendar-title').innerText = `${now.getMonth() + 1}월 챌린지`;
+            const grid = document.getElementById('calendar-grid');
+            grid.innerHTML = '';
+            
+            ['S','M','T','W','T','F','S'].forEach(d => {
+                const h = document.createElement('div');
+                h.className = "text-[10px] font-black text-purple-200";
+                h.innerText = d;
+                grid.appendChild(h);
+            });
+
+            for (let i = 1; i <= 31; i++) {
+                const dateStr = `${now.getFullYear()}. ${String(now.getMonth() + 1).padStart(2, '0')}. ${String(i).padStart(2, '0')}`;
+                const dailyTotal = state.records.filter(r => r.date === dateStr).reduce((s, r) => s + r.price, 0);
+                const isSuccess = dailyTotal > 0 && dailyTotal <= state.dailyTarget;
+                const isFail = dailyTotal > state.dailyTarget;
+
+                const day = document.createElement('div');
+                day.className = `aspect-square flex flex-col items-center justify-center rounded-2xl relative ${isSuccess ? 'bg-green-100/50' : isFail ? 'bg-red-50' : 'bg-gray-50'}`;
+                day.innerHTML = `
+                    <span class="text-[10px] font-bold ${isSuccess ? 'text-green-700' : isFail ? 'text-red-700' : 'text-gray-300'}">${i}</span>
+                    ${isSuccess ? '<div class="absolute top-1 right-1 w-1.5 h-1.5 bg-green-500 rounded-full"></div>' : ''}
+                `;
+                grid.appendChild(day);
+            }
+        }
+
+        // --- Guide Logic ---
+        function startGuide() {
+            state.showGuide = true;
+            document.getElementById('guide-layer').classList.remove('hidden');
+            document.getElementById('bottom-nav').classList.add('opacity-0', 'scale-95');
+            updateGuideStep();
+        }
+
+        function updateGuideStep() {
+            const step = guideData[state.guideStep];
+            if (state.activeTab !== step.targetTab) setActiveTab(step.targetTab);
+            
+            const target = document.getElementById(step.highlightId);
+            const rect = target.getBoundingClientRect();
+            const containerRect = document.getElementById('app').getBoundingClientRect();
+            
+            const top = rect.top - containerRect.top;
+            const left = rect.left - containerRect.left;
+            const width = rect.width;
+            const height = rect.height;
+
+            const focus = document.getElementById('spotlight-focus');
+            focus.style.top = `${top - 4}px`;
+            focus.style.left = `${left - 4}px`;
+            focus.style.width = `${width + 8}px`;
+            focus.style.height = `${height + 8}px`;
+
+            document.getElementById('spotlight-top').style.cssText = `top:0; left:0; width:100%; height:${top}px;`;
+            document.getElementById('spotlight-bottom').style.cssText = `top:${top + height}px; left:0; width:100%; height:100%;`;
+            document.getElementById('spotlight-left').style.cssText = `top:${top}px; left:0; width:${left}px; height:${height}px;`;
+            document.getElementById('spotlight-right').style.cssText = `top:${top}px; left:${left + width}px; width:100%; height:${height}px;`;
+
+            const box = document.getElementById('guide-box-container');
+            if (step.boxPosition === 'bottom') {
+                box.classList.remove('top-8');
+                box.classList.add('bottom-8');
+            } else {
+                box.classList.remove('bottom-8');
+                box.classList.add('top-8');
+            }
+
+            const dots = document.getElementById('guide-dots');
+            dots.innerHTML = '';
+            guideData.forEach((_, i) => {
+                const dot = document.createElement('div');
+                dot.className = `h-1.5 rounded-full transition-all duration-300 ${i === state.guideStep ? 'w-8 bg-white' : 'w-2 bg-white/30'}`;
+                dots.appendChild(dot);
+            });
+
+            const btn = document.getElementById('guide-next-btn');
+            btn.querySelector('span').innerText = (state.guideStep === guideData.length - 1) ? '시작하기' : '다음';
+            btn.onclick = nextGuide;
+        }
+
+        function nextGuide() {
+            if (state.guideStep < guideData.length - 1) {
+                state.guideStep++;
+                updateGuideStep();
+            } else {
+                state.showGuide = false;
+                document.getElementById('guide-layer').classList.add('hidden');
+                document.getElementById('bottom-nav').classList.remove('opacity-0', 'scale-95');
+                setActiveTab('home');
+            }
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
